@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "433944411768",
+    "project_id": "edonation-1448c",
+    "storage_bucket": "edonation-1448c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433944411768:android:ebd1b2ee46a966a148378d",
+        "android_client_info": {
+          "package_name": "com.example.edonation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAS6xhtbqiLNqmFmeXVAFRF8XndLf5T5qg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
