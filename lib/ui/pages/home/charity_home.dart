@@ -1,12 +1,10 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:edonation/firebase/charity/charity_svc.dart';
+import 'package:edonation/ui/widgets/pop_up.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CharityDashboardScreen extends StatefulWidget {
@@ -165,6 +163,11 @@ class _CharityDashboardScreenState extends State<CharityDashboardScreen>
                     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                     onTap: () {
                       Navigator.pop(context);
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          SnackBar(content: Text("No Settings Yet!")),
+                        );
                       // Navigate to settings
                     },
                   ),
@@ -176,6 +179,15 @@ class _CharityDashboardScreenState extends State<CharityDashboardScreen>
                     onTap: () {
                       Navigator.pop(context);
                       // Navigate to help
+                      ScaffoldMessenger.of(context)
+                        ..hideCurrentSnackBar()
+                        ..showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              "Help and support when in production!",
+                            ),
+                          ),
+                        );
                     },
                   ),
                   const Divider(height: 1),
@@ -660,463 +672,272 @@ class _CharityDashboardScreenState extends State<CharityDashboardScreen>
   }
 
   Future<void> _showCreateCampaignDialog() async {
-    final nameController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final targetController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    File? pickedImage;
-    bool isLoading = false;
-
     await showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Create New Campaign',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Campaign Name',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(Icons.campaign),
-                        ),
-                        validator:
-                            (value) =>
-                                value == null || value.isEmpty
-                                    ? 'Please enter a name'
-                                    : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: descriptionController,
-                        decoration: InputDecoration(
-                          labelText: 'Description',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(Icons.description),
-                        ),
-                        maxLines: 3,
-                        validator:
-                            (value) =>
-                                value == null || value.isEmpty
-                                    ? 'Please enter a description'
-                                    : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: targetController,
-                        decoration: InputDecoration(
-                          labelText: 'Target Amount',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(Icons.attach_money),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator:
-                            (value) =>
-                                value == null || double.tryParse(value) == null
-                                    ? 'Please enter a valid amount'
-                                    : null,
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child:
-                            pickedImage == null
-                                ? Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.image,
-                                      size: 40,
-                                      color: Colors.grey[400],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    const Text('No image selected'),
-                                  ],
-                                )
-                                : ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.file(
-                                    pickedImage!,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                  ),
-                                ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final picker = ImagePicker();
-                            final pickedFile = await picker.pickImage(
-                              source: ImageSource.gallery,
-                            );
-                            if (pickedFile != null) {
-                              setState(() {
-                                pickedImage = File(pickedFile.path);
-                              });
-                            }
-                          },
-                          icon: const Icon(Icons.photo_library),
-                          label: const Text('Select Image'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed:
-                      isLoading ? null : () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed:
-                      isLoading
-                          ? null
-                          : () async {
-                            if (formKey.currentState!.validate() &&
-                                pickedImage != null) {
-                              setState(() => isLoading = true);
-                              try {
-                                await _charitySvc.createCampaign(
-                                  charityId: widget.charityId,
-                                  charityName: widget.charityName,
-                                  name: nameController.text,
-                                  description: descriptionController.text,
-                                  targetAmount: double.parse(
-                                    targetController.text,
-                                  ),
-                                  campaignImage: pickedImage!,
-                                );
-                                if (mounted) {
-                                  Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Campaign created successfully!',
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Failed to create campaign: $e',
-                                      ),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              } finally {
-                                setState(() => isLoading = false);
-                              }
-                            } else if (pickedImage == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please select an image'),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                            }
-                          },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1976D2),
-                    foregroundColor: Colors.white,
-                  ),
-                  child:
-                      isLoading
-                          ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                          : const Text('Create'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder:
+          (context) => CampaignDialog(
+            charityId: widget.charityId,
+            charityName: widget.charityName,
+          ),
     );
   }
 
   Future<void> _showEditCampaignDialog(Map<String, dynamic> campaign) async {
-    final nameController = TextEditingController(text: campaign['name']);
-    final descriptionController = TextEditingController(
-      text: campaign['description'],
-    );
-    final targetController = TextEditingController(
-      text: campaign['targetAmount'].toString(),
-    );
-    final formKey = GlobalKey<FormState>();
-    File? pickedImage;
-    bool isLoading = false;
-
     await showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Edit Campaign',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              content: SingleChildScrollView(
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: nameController,
-                        decoration: InputDecoration(
-                          labelText: 'Campaign Name',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(Icons.campaign),
-                        ),
-                        validator:
-                            (value) =>
-                                value == null || value.isEmpty
-                                    ? 'Please enter a name'
-                                    : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: descriptionController,
-                        decoration: InputDecoration(
-                          labelText: 'Description',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(Icons.description),
-                        ),
-                        maxLines: 3,
-                        validator:
-                            (value) =>
-                                value == null || value.isEmpty
-                                    ? 'Please enter a description'
-                                    : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: targetController,
-                        decoration: InputDecoration(
-                          labelText: 'Target Amount',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          prefixIcon: const Icon(Icons.attach_money),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator:
-                            (value) =>
-                                value == null || double.tryParse(value) == null
-                                    ? 'Please enter a valid amount'
-                                    : null,
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child:
-                            pickedImage == null
-                                ? (campaign['imageUrl'] != null
-                                    ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Image.network(
-                                        campaign['imageUrl'],
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                        errorBuilder:
-                                            (context, error, stackTrace) =>
-                                                Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.image,
-                                                      size: 40,
-                                                      color: Colors.grey[400],
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    const Text(
-                                                      'No image selected',
-                                                    ),
-                                                  ],
-                                                ),
-                                      ),
-                                    )
-                                    : Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.image,
-                                          size: 40,
-                                          color: Colors.grey[400],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        const Text('No image selected'),
-                                      ],
-                                    ))
-                                : ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: Image.file(
-                                    pickedImage!,
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                  ),
-                                ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final picker = ImagePicker();
-                            final pickedFile = await picker.pickImage(
-                              source: ImageSource.gallery,
-                            );
-                            if (pickedFile != null) {
-                              setState(() {
-                                pickedImage = File(pickedFile.path);
-                              });
-                            }
-                          },
-                          icon: const Icon(Icons.photo_library),
-                          label: const Text('Select Image'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed:
-                      isLoading ? null : () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed:
-                      isLoading
-                          ? null
-                          : () async {
-                            if (formKey.currentState!.validate()) {
-                              setState(() => isLoading = true);
-                              try {
-                                await _charitySvc.updateCampaign(
-                                  campaignId: campaign['id'],
-                                  name: nameController.text,
-                                  description: descriptionController.text,
-                                  targetAmount: double.parse(
-                                    targetController.text,
-                                  ),
-                                  campaignImage: pickedImage,
-                                );
-                                if (mounted) {
-                                  Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Campaign updated successfully!',
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Failed to update campaign: $e',
-                                      ),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              } finally {
-                                setState(() => isLoading = false);
-                              }
-                            } else if (pickedImage == null &&
-                                campaign['imageUrl'] == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Please select an image'),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                            }
-                          },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1976D2),
-                    foregroundColor: Colors.white,
-                  ),
-                  child:
-                      isLoading
-                          ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                          : const Text('Update'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      builder:
+          (context) => CampaignDialog(
+            charityId: widget.charityId,
+            charityName: widget.charityName,
+            campaign: campaign,
+          ),
     );
   }
+
+  // Future<void> _showEditCampaignDialog(Map<String, dynamic> campaign) async {
+  //   final nameController = TextEditingController(text: campaign['name']);
+  //   final descriptionController = TextEditingController(
+  //     text: campaign['description'],
+  //   );
+  //   final targetController = TextEditingController(
+  //     text: campaign['targetAmount'].toString(),
+  //   );
+  //   final formKey = GlobalKey<FormState>();
+  //   File? pickedImage;
+  //   bool isLoading = false;
+
+  //   await showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return StatefulBuilder(
+  //         builder: (context, setState) {
+  //           return AlertDialog(
+  //             shape: RoundedRectangleBorder(
+  //               borderRadius: BorderRadius.circular(16),
+  //             ),
+  //             title: const Text(
+  //               'Edit Campaign',
+  //               style: TextStyle(fontWeight: FontWeight.bold),
+  //             ),
+  //             content: SingleChildScrollView(
+  //               child: Form(
+  //                 key: formKey,
+  //                 child: Column(
+  //                   mainAxisSize: MainAxisSize.min,
+  //                   children: [
+  //                     TextFormField(
+  //                       controller: nameController,
+  //                       decoration: InputDecoration(
+  //                         labelText: 'Campaign Name',
+  //                         border: OutlineInputBorder(
+  //                           borderRadius: BorderRadius.circular(12),
+  //                         ),
+  //                         prefixIcon: const Icon(Icons.campaign),
+  //                       ),
+  //                       validator:
+  //                           (value) =>
+  //                               value == null || value.isEmpty
+  //                                   ? 'Please enter a name'
+  //                                   : null,
+  //                     ),
+  //                     const SizedBox(height: 16),
+  //                     TextFormField(
+  //                       controller: descriptionController,
+  //                       decoration: InputDecoration(
+  //                         labelText: 'Description',
+  //                         border: OutlineInputBorder(
+  //                           borderRadius: BorderRadius.circular(12),
+  //                         ),
+  //                         prefixIcon: const Icon(Icons.description),
+  //                       ),
+  //                       maxLines: 3,
+  //                       validator:
+  //                           (value) =>
+  //                               value == null || value.isEmpty
+  //                                   ? 'Please enter a description'
+  //                                   : null,
+  //                     ),
+  //                     const SizedBox(height: 16),
+  //                     TextFormField(
+  //                       controller: targetController,
+  //                       decoration: InputDecoration(
+  //                         labelText: 'Target Amount',
+  //                         border: OutlineInputBorder(
+  //                           borderRadius: BorderRadius.circular(12),
+  //                         ),
+  //                         prefixIcon: const Icon(Icons.attach_money),
+  //                       ),
+  //                       keyboardType: TextInputType.number,
+  //                       validator:
+  //                           (value) =>
+  //                               value == null || double.tryParse(value) == null
+  //                                   ? 'Please enter a valid amount'
+  //                                   : null,
+  //                     ),
+  //                     const SizedBox(height: 16),
+  //                     Container(
+  //                       width: double.infinity,
+  //                       height: 120,
+  //                       decoration: BoxDecoration(
+  //                         border: Border.all(color: Colors.grey[300]!),
+  //                         borderRadius: BorderRadius.circular(12),
+  //                       ),
+  //                       child:
+  //                           pickedImage == null
+  //                               ? (campaign['imageUrl'] != null
+  //                                   ? ClipRRect(
+  //                                     borderRadius: BorderRadius.circular(12),
+  //                                     child: Image.network(
+  //                                       campaign['imageUrl'],
+  //                                       fit: BoxFit.cover,
+  //                                       width: double.infinity,
+  //                                       height: double.infinity,
+  //                                       errorBuilder:
+  //                                           (context, error, stackTrace) =>
+  //                                               Column(
+  //                                                 mainAxisAlignment:
+  //                                                     MainAxisAlignment.center,
+  //                                                 children: [
+  //                                                   Icon(
+  //                                                     Icons.image,
+  //                                                     size: 40,
+  //                                                     color: Colors.grey[400],
+  //                                                   ),
+  //                                                   const SizedBox(height: 8),
+  //                                                   const Text(
+  //                                                     'No image selected',
+  //                                                   ),
+  //                                                 ],
+  //                                               ),
+  //                                     ),
+  //                                   )
+  //                                   : Column(
+  //                                     mainAxisAlignment:
+  //                                         MainAxisAlignment.center,
+  //                                     children: [
+  //                                       Icon(
+  //                                         Icons.image,
+  //                                         size: 40,
+  //                                         color: Colors.grey[400],
+  //                                       ),
+  //                                       const SizedBox(height: 8),
+  //                                       const Text('No image selected'),
+  //                                     ],
+  //                                   ))
+  //                               : ClipRRect(
+  //                                 borderRadius: BorderRadius.circular(12),
+  //                                 child: Image.file(
+  //                                   pickedImage!,
+  //                                   fit: BoxFit.cover,
+  //                                   width: double.infinity,
+  //                                   height: double.infinity,
+  //                                 ),
+  //                               ),
+  //                     ),
+  //                     const SizedBox(height: 8),
+  //                     SizedBox(
+  //                       width: double.infinity,
+  //                       child: OutlinedButton.icon(
+  //                         onPressed: () async {
+  //                           final picker = ImagePicker();
+  //                           final pickedFile = await picker.pickImage(
+  //                             source: ImageSource.gallery,
+  //                           );
+  //                           if (pickedFile != null) {
+  //                             setState(() {
+  //                               pickedImage = File(pickedFile.path);
+  //                             });
+  //                           }
+  //                         },
+  //                         icon: const Icon(Icons.photo_library),
+  //                         label: const Text('Select Image'),
+  //                       ),
+  //                     ),
+  //                   ],
+  //                 ),
+  //               ),
+  //             ),
+  //             actions: [
+  //               TextButton(
+  //                 onPressed:
+  //                     isLoading ? null : () => Navigator.of(context).pop(),
+  //                 child: const Text('Cancel'),
+  //               ),
+  //               ElevatedButton(
+  //                 onPressed:
+  //                     isLoading
+  //                         ? null
+  //                         : () async {
+  //                           if (formKey.currentState!.validate()) {
+  //                             setState(() => isLoading = true);
+  //                             try {
+  //                               await _charitySvc.updateCampaign(
+  //                                 campaignId: campaign['id'],
+  //                                 name: nameController.text,
+  //                                 description: descriptionController.text,
+  //                                 targetAmount: double.parse(
+  //                                   targetController.text,
+  //                                 ),
+  //                                 campaignImage: pickedImage,
+  //                               );
+  //                               if (mounted) {
+  //                                 Navigator.of(context).pop();
+  //                                 ScaffoldMessenger.of(context).showSnackBar(
+  //                                   const SnackBar(
+  //                                     content: Text(
+  //                                       'Campaign updated successfully!',
+  //                                     ),
+  //                                     backgroundColor: Colors.green,
+  //                                   ),
+  //                                 );
+  //                               }
+  //                             } catch (e) {
+  //                               if (mounted) {
+  //                                 ScaffoldMessenger.of(context).showSnackBar(
+  //                                   SnackBar(
+  //                                     content: Text(
+  //                                       'Failed to update campaign: $e',
+  //                                     ),
+  //                                     backgroundColor: Colors.red,
+  //                                   ),
+  //                                 );
+  //                               }
+  //                             } finally {
+  //                               setState(() => isLoading = false);
+  //                             }
+  //                           } else if (pickedImage == null &&
+  //                               campaign['imageUrl'] == null) {
+  //                             ScaffoldMessenger.of(context).showSnackBar(
+  //                               const SnackBar(
+  //                                 content: Text('Please select an image'),
+  //                                 backgroundColor: Colors.orange,
+  //                               ),
+  //                             );
+  //                           }
+  //                         },
+  //                 style: ElevatedButton.styleFrom(
+  //                   backgroundColor: const Color(0xFF1976D2),
+  //                   foregroundColor: Colors.white,
+  //                 ),
+  //                 child:
+  //                     isLoading
+  //                         ? const SizedBox(
+  //                           width: 16,
+  //                           height: 16,
+  //                           child: CircularProgressIndicator(
+  //                             strokeWidth: 2,
+  //                             color: Colors.white,
+  //                           ),
+  //                         )
+  //                         : const Text('Update'),
+  //               ),
+  //             ],
+  //           );
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
 }
 
 class StripePayoutSetupScreen extends StatefulWidget {
