@@ -92,7 +92,7 @@ class _IdentityVerificationScreenState
         lastName: lastNameController.text,
         docType: selectedDocType,
         docNumber: docNumberController.text,
-        phone: phoneController.text,
+        // phone: phoneController.text,
         frontImage: frontImage,
         backImage: backImage,
       );

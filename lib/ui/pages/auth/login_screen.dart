@@ -3,6 +3,8 @@ import 'package:edonation/core/funcs/push_func.dart';
 import 'package:edonation/core/theme/cons.dart';
 import 'package:edonation/firebase/auth/auth_svc.dart';
 import 'package:edonation/ui/pages/admin/admin_controll_page.dart';
+import 'package:edonation/ui/pages/home/charity_home.dart';
+import 'package:edonation/ui/pages/home/donor_home.dart' as dh;
 import 'package:edonation/ui/widgets/custom_appbar.dart';
 import 'package:edonation/ui/widgets/custom_buttons.dart';
 import 'package:edonation/ui/widgets/custom_text_field.dart';
@@ -37,18 +39,33 @@ class _LoginScreenState extends State<LoginScreen> {
           _emailController.text.trim() == Constants.superAdmin &&
           _passwordController.text.trim() == Constants.adminPassword) {
         if (mounted) {
-          Navigator.pushReplacement(context, mprChange(AdminDashboardScreen()));
+          Navigator.pushReplacement(context, mprChange(AdminMainScreen()));
         }
         return;
       }
 
       final user = await _firebaseService.loginUser(
-        accountType: _selectedUserType.name,
+        // accountType: _selectedUserType.name,
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
       if (user != null && mounted) {
+        if (_selectedUserType == UserType.charity) {
+          Navigator.pushReplacement(
+            context,
+            mprChange(
+              CharityMainScreen(
+                charityId: user.userId,
+                charityName: user.charity?.charityName ?? "Haris",
+              ),
+            ),
+          );
+        }
+        if (_selectedUserType == UserType.donor) {
+          Navigator.pushReplacement(context, mprChange(dh.DonorMainScreen()));
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('${_selectedUserType.name} login successful!'),
@@ -185,9 +202,9 @@ class _LoginScreenState extends State<LoginScreen> {
               if (_selectedUserType == UserType.admin) {
                 return null; // Admin uses Constants.adminPassword, no length check
               }
-              if (val.length != 4) {
-                return "Password must be 4 digits";
-              }
+              // if (val.length != 4) {
+              //   return "Password must be 4 digits";
+              // }
               return null;
             },
           ),
