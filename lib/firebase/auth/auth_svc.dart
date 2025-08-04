@@ -107,6 +107,18 @@ class FirebaseService {
     return snap.docs.isEmpty ? null : AppUser.fromFirestore(snap.docs.first);
   }
 
+   Future<AppUser?> getUser({
+required String id  }) async {
+    final snap = await _firestore
+        .collection('users')
+        .where('userId', isEqualTo: id)
+        .where('isApproved', isEqualTo: true)
+        .limit(1)
+        .get();
+    return snap.docs.isEmpty ? null : AppUser.fromFirestore(snap.docs.first);
+  }
+
+
   /* ---------- DONOR IDENTITY ---------- */
   Future<void> saveDonorIdentity({
     required String userId,

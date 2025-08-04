@@ -1,7 +1,13 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:edonation/core/funcs/push_func.dart';
+import 'package:edonation/firebase/auth/auth_svc.dart';
+import 'package:edonation/services.dart';
+import 'package:edonation/ui/pages/auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,7 +37,6 @@ class FirebaseService {
       _firestore
           .collection('donationHistory')
           .where('donorId', isEqualTo: donorId)
-          .orderBy('timestamp', descending: true)
           .snapshots()
           .map(
             (qs) => qs.docs.map((doc) => Donation.fromFirestore(doc)).toList(),
@@ -65,7 +70,6 @@ class FirebaseService {
     }
   }
 
- 
   // New contribution and transaction methods
   Future<void> contributeToCampaign({
     required String campaignId,
@@ -172,19 +176,6 @@ class FirebaseService {
       'itemType': itemType,
       'timestamp': FieldValue.serverTimestamp(),
     });
-  }
-
-  Future<void> addSampleFundraiser() async {
-    final newFundraiser = {
-      'name': 'Sample Fundraiser ${Random().nextInt(100)}',
-      'description': 'Help raise money for a great cause!',
-      'targetAmount': 5000.0,
-      'currentAmount': 0.0,
-      'currentDonations': 0,
-      'status': 'active',
-      'createdAt': FieldValue.serverTimestamp(),
-    };
-    await _firestore.collection('fundraisers').add(newFundraiser);
   }
 
   // Payment method saving logic
@@ -640,7 +631,13 @@ class _DonatePageState extends State<DonatePage> with TickerProviderStateMixin {
             ),
             labelColor: Colors.white,
             unselectedLabelColor: Colors.black87,
-            tabs: const [Tab(text: 'Charities'), Tab(text: 'Fund Raising')],
+            tabs: [
+              Container(padding: EdgeInsets.all(14), child: Text("Charities")),
+              Container(
+                padding: EdgeInsets.all(14),
+                child: Text("Fund Raising"),
+              ),
+            ],
           ),
         ),
         Expanded(
@@ -708,22 +705,6 @@ class _DonatePageState extends State<DonatePage> with TickerProviderStateMixin {
               children: [
                 const Text('No active fundraisers found.'),
                 const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    service.addSampleFundraiser();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Adding a sample fundraiser...'),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Sample Fundraiser'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1976D2),
-                    foregroundColor: Colors.white,
-                  ),
-                ),
               ],
             ),
           );
@@ -1108,7 +1089,7 @@ class _AddPaymentMethodDialogState extends State<AddPaymentMethodDialog> {
                   labelText: 'MM/YY',
                   hintText: 'MM/YY',
                 ),
-                keyboardType: TextInputType.datetime,
+                keyboardType: TextInputType.text,
                 validator:
                     (value) =>
                         value!.length != 5 ? 'Invalid expiry date' : null,
@@ -1163,105 +1144,85 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  late Future<Map<String, dynamic>> _userInfoFuture;
+  late AppUser _userInfoFuture;
   final _nameController = TextEditingController();
-  bool _isEditing = false;
-  bool _isLoading = false;
+  final bool _isEditing = false;
 
   @override
   void initState() {
     super.initState();
-    _userInfoFuture = widget.service.getOrCreateUser(donorId: widget.donorId);
+    _userInfoFuture = serviceLocator<AppUser>();
   }
 
-  void _toggleEdit() {
-    setState(() {
-      _isEditing = !_isEditing;
-      if (!_isEditing) {
-        _nameController.text = ''; // Clear text if canceled
-      }
-    });
+  void _toggleEdit() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.remove("userId");
+    Navigator.pushReplacement(context, mprChange(WelcomeScreen()));
   }
-
-  
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _userInfoFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-        final userInfo = snapshot.data ?? {};
-        final userName = userInfo['name'] ?? 'Anonymous Donor';
-
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.account_circle, size: 100, color: Colors.blue),
-                const SizedBox(height: 16),
-                if (!_isEditing) ...[
-                  Text(
-                    userName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.account_circle, size: 100, color: Colors.blue),
+            const SizedBox(height: 16),
+            if (!_isEditing) ...[
+              Text(
+                "${_userInfoFuture.donor?.firstName ?? ""} ${_userInfoFuture.donor?.lastName ?? ""}",
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Email: ${_userInfoFuture.email}',
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _toggleEdit,
+                icon: const Icon(Icons.logout, color: Colors.white),
+                label: const Text('Log Out'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Donor ID: ${widget.donorId}',
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ),
+            ] else ...[
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: 'Your Name',
+                  hintText: 'e.g., John Doe',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
                     onPressed: _toggleEdit,
-                    icon: const Icon(Icons.edit, color: Colors.white),
-                    label: const Text('Edit Profile'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
+                    child: const Text('Cancel'),
                   ),
-                ] else ...[
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Your Name',
-                      hintText: 'e.g., John Doe',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      TextButton(
-                        onPressed: _toggleEdit,
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 16),
-                    ],
-                  ),
+                  const SizedBox(width: 16),
                 ],
-              ],
-            ),
-          ),
-        );
-      },
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

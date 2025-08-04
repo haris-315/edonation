@@ -1,7 +1,10 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:edonation/core/constants.dart';
 import 'package:edonation/core/funcs/push_func.dart';
 import 'package:edonation/core/theme/cons.dart';
 import 'package:edonation/firebase/auth/auth_svc.dart';
+import 'package:edonation/services.dart';
 import 'package:edonation/ui/pages/admin/admin_controll_page.dart';
 import 'package:edonation/ui/pages/home/charity_home.dart';
 import 'package:edonation/ui/pages/home/donor_home.dart' as dh;
@@ -9,6 +12,7 @@ import 'package:edonation/ui/widgets/custom_appbar.dart';
 import 'package:edonation/ui/widgets/custom_buttons.dart';
 import 'package:edonation/ui/widgets/custom_text_field.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 enum UserType { admin, charity, donor }
 
@@ -25,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final FirebaseService _firebaseService = FirebaseService();
   bool _isLoading = false;
-  UserType _selectedUserType = UserType.donor; // Default to donor
+  UserType _selectedUserType = UserType.admin; // Default to donor
 
   Future<void> _login() async {
     if (_isLoading || !_formKey.currentState!.validate()) return;
@@ -51,13 +55,17 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (user != null && mounted) {
+        final prefs = await SharedPreferences.getInstance();
+        prefs.setString("userId", user.userId);
+        serviceLocator.unregister<AppUser>();
+        serviceLocator.registerFactory<AppUser>(() => user);
         if (_selectedUserType == UserType.charity) {
           Navigator.pushReplacement(
             context,
             mprChange(
-              CharityMainScreen(
+              CharityDashboardScreen(
                 charityId: user.userId,
-                charityName: user.charity?.charityName ?? "Haris",
+                charityName: user.charity?.charityName ?? "User",
               ),
             ),
           );
@@ -72,7 +80,6 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: ColCons.defaultColor,
           ),
         );
-        // TODO: Navigate to appropriate screen based on _selectedUserType
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

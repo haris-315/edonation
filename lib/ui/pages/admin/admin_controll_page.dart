@@ -1,7 +1,9 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:edonation/core/funcs/push_func.dart';
 import 'package:edonation/firebase/auth/admin_svc.dart';
+import 'package:edonation/ui/pages/auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
 
 class AdminMainScreen extends StatefulWidget {
@@ -59,13 +61,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
           ),
           elevation: 0,
           backgroundColor: Colors.blue[800],
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {},
-              tooltip: 'Notifications',
-            ),
-          ],
         ),
         body: SafeArea(
           child: Padding(
@@ -563,7 +558,13 @@ class _MembersPageState extends State<MembersPage> {
               labelColor: Colors.black87,
               unselectedLabelColor: Colors.grey[600],
               labelStyle: const TextStyle(fontWeight: FontWeight.w600),
-              tabs: const [Tab(text: 'Donors'), Tab(text: 'Charities')],
+              tabs: [
+                Container(padding: EdgeInsets.all(14), child: Text("Donors")),
+                Container(
+                  padding: EdgeInsets.all(14),
+                  child: Text("Charities"),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -1296,6 +1297,26 @@ class _MenuPageState extends State<MenuPage> {
                 ),
               ),
               child: const Text('Update'),
+            ),
+          ),
+
+          SizedBox(height: 10),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(context, mprChange(WelcomeScreen()));
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[500],
+                foregroundColor: const Color.fromARGB(255, 253, 240, 240),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Log Out'),
             ),
           ),
         ],

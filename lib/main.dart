@@ -1,5 +1,5 @@
 import 'package:edonation/firebase_options.dart';
-import 'package:edonation/ui/pages/auth/welcome_screen.dart';
+import 'package:edonation/ui/pages/bootstrap/splash.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: WelcomeScreen(),
+      home: SplashScreen(),
     );
   }
 }
