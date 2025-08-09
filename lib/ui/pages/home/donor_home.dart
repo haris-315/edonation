@@ -21,7 +21,6 @@ class FirebaseService {
   // Streams for donor page
   Stream<List<Campaign>> getActiveCampaignsStream() => _firestore
       .collection('campaigns')
-      .where('status', isEqualTo: 'active')
       .snapshots()
       .map((qs) => qs.docs.map((doc) => Campaign.fromFirestore(doc)).toList());
 
@@ -452,7 +451,7 @@ class HomePage extends StatelessWidget {
           children: [
             _buildDonationHistorySection(context),
             const SizedBox(height: 24),
-            _buildNotificationsSection(context),
+            // _buildNotificationsSection(context),
           ],
         ),
       ),
@@ -503,7 +502,7 @@ class HomePage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Admin Notifications (Simulated)',
+          'Admin Notifications',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),

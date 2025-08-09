@@ -27,16 +27,19 @@ class FirebaseService {
   Future<String> sendOtpEmail(String email) async {
     final otp =
         (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString();
-    final smtpServer =
-        gmail('remotehms112233@gmail.com', 'zwgr gfbb xqij bfmo');
-    final message = Message()
-      ..from = const Address('your-email@gmail.com', 'eDonation')
-      ..recipients.add(email)
-      ..subject = 'Your eDonation OTP'
-      ..html = Constants.emailTemplate(otp);
+    final smtpServer = gmail(
+      'remotehms112233@gmail.com',
+      'zwgr gfbb xqij bfmo',
+    );
+    final message =
+        Message()
+          ..from = const Address('your-email@gmail.com', 'eDonation')
+          ..recipients.add(email)
+          ..subject = 'Your eDonation OTP'
+          ..html = Constants.emailTemplate(otp);
 
     try {
-      // await send(message, smtpServer);
+      await send(message, smtpServer);
       print(otp);
       return otp;
     } catch (e) {
@@ -51,16 +54,18 @@ class FirebaseService {
     required String phone,
     required String password,
   }) async {
-    final emailCheck = await _firestore
-        .collection('users')
-        .where('email', isEqualTo: email.trim())
-        .get();
+    final emailCheck =
+        await _firestore
+            .collection('users')
+            .where('email', isEqualTo: email.trim())
+            .get();
     if (emailCheck.docs.isNotEmpty) {
       throw Exception('Email already in use.');
     }
 
     final uuid = const Uuid().v4();
-    final userId = accountType == UserType.donor.name ? 'dono_$uuid' : 'charown_$uuid';
+    final userId =
+        accountType == UserType.donor.name ? 'dono_$uuid' : 'charown_$uuid';
     final user = AppUser(
       userId: userId,
       accountType: UserType.values.byName(accountType),
@@ -86,7 +91,7 @@ class FirebaseService {
       await adminDoc.set({'usersToApprove': []});
     }
     await adminDoc.update({
-      'usersToApprove': FieldValue.arrayUnion([pending.toMap()])
+      'usersToApprove': FieldValue.arrayUnion([pending.toMap()]),
     });
 
     return userId;
@@ -97,27 +102,27 @@ class FirebaseService {
     required String email,
     required String password,
   }) async {
-    final snap = await _firestore
-        .collection('users')
-        .where('email', isEqualTo: email.trim())
-        .where('password', isEqualTo: _generateHash(password))
-        .where('isApproved', isEqualTo: true)
-        .limit(1)
-        .get();
+    final snap =
+        await _firestore
+            .collection('users')
+            .where('email', isEqualTo: email.trim())
+            .where('password', isEqualTo: _generateHash(password))
+            .where('isApproved', isEqualTo: true)
+            .limit(1)
+            .get();
     return snap.docs.isEmpty ? null : AppUser.fromFirestore(snap.docs.first);
   }
 
-   Future<AppUser?> getUser({
-required String id  }) async {
-    final snap = await _firestore
-        .collection('users')
-        .where('userId', isEqualTo: id)
-        .where('isApproved', isEqualTo: true)
-        .limit(1)
-        .get();
+  Future<AppUser?> getUser({required String id}) async {
+    final snap =
+        await _firestore
+            .collection('users')
+            .where('userId', isEqualTo: id)
+            .where('isApproved', isEqualTo: true)
+            .limit(1)
+            .get();
     return snap.docs.isEmpty ? null : AppUser.fromFirestore(snap.docs.first);
   }
-
 
   /* ---------- DONOR IDENTITY ---------- */
   Future<void> saveDonorIdentity({
@@ -190,19 +195,22 @@ required String id  }) async {
   }
 
   /* ---------- STREAMS ---------- */
-  Stream<List<PendingApprovalUser>> getUnapprovedUsersStream() =>
-      _firestore.collection('admins').doc('admin_data').snapshots().map(
-            (snap) => (snap.data()?['usersToApprove'] as List<dynamic>? ?? [])
+  Stream<List<PendingApprovalUser>> getUnapprovedUsersStream() => _firestore
+      .collection('admins')
+      .doc('admin_data')
+      .snapshots()
+      .map(
+        (snap) =>
+            (snap.data()?['usersToApprove'] as List<dynamic>? ?? [])
                 .map((e) => PendingApprovalUser.fromMap(e))
                 .toList(),
-          );
+      );
 
-  Stream<List<AppUser>> getApprovedMembersStream() =>
-      _firestore
-          .collection('users')
-          .where('isApproved', isEqualTo: true)
-          .snapshots()
-          .map((qs) => qs.docs.map(AppUser.fromFirestore).toList());
+  Stream<List<AppUser>> getApprovedMembersStream() => _firestore
+      .collection('users')
+      .where('isApproved', isEqualTo: true)
+      .snapshots()
+      .map((qs) => qs.docs.map(AppUser.fromFirestore).toList());
 }
 
 /// ================================================================
@@ -249,14 +257,14 @@ class AppUser {
   }
 
   Map<String, dynamic> toSignupMap() => {
-        'userId': userId,
-        'accountType': accountType.name,
-        'email': email,
-        'phone': phone,
-        'password': passwordHash,
-        'isApproved': isApproved,
-        'timestamp': Timestamp.fromDate(timestamp),
-      };
+    'userId': userId,
+    'accountType': accountType.name,
+    'email': email,
+    'phone': phone,
+    'password': passwordHash,
+    'isApproved': isApproved,
+    'timestamp': Timestamp.fromDate(timestamp),
+  };
 }
 
 class DonorIdentity {
@@ -279,24 +287,24 @@ class DonorIdentity {
   });
 
   factory DonorIdentity.fromMap(Map<String, dynamic> d) => DonorIdentity(
-        firstName: d['firstName'],
-        lastName: d['lastName'],
-        docType: d['docType'],
-        docNumber: d['docNumber'],
-        frontImageUrl: d['frontImageUrl'],
-        backImageUrl: d['backImageUrl'],
-        updatedAt: (d['updatedAt'] as Timestamp).toDate(),
-      );
+    firstName: d['firstName'],
+    lastName: d['lastName'],
+    docType: d['docType'],
+    docNumber: d['docNumber'],
+    frontImageUrl: d['frontImageUrl'],
+    backImageUrl: d['backImageUrl'],
+    updatedAt: (d['updatedAt'] as Timestamp).toDate(),
+  );
 
   Map<String, dynamic> toMap() => {
-        'firstName': firstName,
-        'lastName': lastName,
-        'docType': docType,
-        'docNumber': docNumber,
-        if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
-        if (backImageUrl != null) 'backImageUrl': backImageUrl,
-        'updatedAt': Timestamp.fromDate(updatedAt),
-      };
+    'firstName': firstName,
+    'lastName': lastName,
+    'docType': docType,
+    'docNumber': docNumber,
+    if (frontImageUrl != null) 'frontImageUrl': frontImageUrl,
+    if (backImageUrl != null) 'backImageUrl': backImageUrl,
+    'updatedAt': Timestamp.fromDate(updatedAt),
+  };
 }
 
 class CharityIdentity {
@@ -307,7 +315,6 @@ class CharityIdentity {
   final String? verificationDocumentUrl;
   final String? charityLogoUrl;
   final DateTime updatedAt;
-  
 
   CharityIdentity({
     required this.charityName,
@@ -320,25 +327,25 @@ class CharityIdentity {
   });
 
   factory CharityIdentity.fromMap(Map<String, dynamic> d) => CharityIdentity(
-        charityName: d['charityName'],
-        ownerName: d['ownerName'],
-        contactNumber: d['contactNumber'],
-        cnicNumber: d['cnicNumber'],
-        verificationDocumentUrl: d['verificationDocumentUrl'],
-        charityLogoUrl: d['charityLogoUrl'],
-        updatedAt: (d['updatedAt'] as Timestamp).toDate(),
-      );
+    charityName: d['charityName'],
+    ownerName: d['ownerName'],
+    contactNumber: d['contactNumber'],
+    cnicNumber: d['cnicNumber'],
+    verificationDocumentUrl: d['verificationDocumentUrl'],
+    charityLogoUrl: d['charityLogoUrl'],
+    updatedAt: (d['updatedAt'] as Timestamp).toDate(),
+  );
 
   Map<String, dynamic> toMap() => {
-        'charityName': charityName,
-        'ownerName': ownerName,
-        'contactNumber': contactNumber,
-        'cnicNumber': cnicNumber,
-        if (verificationDocumentUrl != null)
-          'verificationDocumentUrl': verificationDocumentUrl,
-        if (charityLogoUrl != null) 'charityLogoUrl': charityLogoUrl,
-        'updatedAt': Timestamp.fromDate(updatedAt),
-      };
+    'charityName': charityName,
+    'ownerName': ownerName,
+    'contactNumber': contactNumber,
+    'cnicNumber': cnicNumber,
+    if (verificationDocumentUrl != null)
+      'verificationDocumentUrl': verificationDocumentUrl,
+    if (charityLogoUrl != null) 'charityLogoUrl': charityLogoUrl,
+    'updatedAt': Timestamp.fromDate(updatedAt),
+  };
 }
 
 class PendingApprovalUser {
@@ -366,10 +373,10 @@ class PendingApprovalUser {
       );
 
   Map<String, dynamic> toMap() => {
-        'userId': userId,
-        'accountType': accountType.name,
-        'email': email,
-        'phone': phone,
-        'timestamp': Timestamp.fromDate(timestamp),
-      };
+    'userId': userId,
+    'accountType': accountType.name,
+    'email': email,
+    'phone': phone,
+    'timestamp': Timestamp.fromDate(timestamp),
+  };
 }

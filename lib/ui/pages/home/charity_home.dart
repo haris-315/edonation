@@ -1,7 +1,9 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:edonation/core/funcs/push_func.dart';
 import 'package:edonation/firebase/charity/charity_svc.dart';
+import 'package:edonation/ui/pages/auth/welcome_screen.dart';
 import 'package:edonation/ui/widgets/pop_up.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -238,7 +240,7 @@ class _CharityDashboardScreenState extends State<CharityDashboardScreen>
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('userId');
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/login');
+        Navigator.pushReplacement(context, mprChange(WelcomeScreen()));
       }
     }
   }
